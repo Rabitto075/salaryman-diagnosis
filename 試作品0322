@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>サラリーマン地獄度診断</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    .question {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px 0;
+    }
+    .question input {
+      margin-right: 10px;
+    }
+    .result {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    .safe { background-color: #a0ffa0; }
+    .mild { background-color: #caffb0; }
+    .moderate { background-color: #fffaa0; }
+    .serious { background-color: #ffcc80; }
+    .danger { background-color: #ffaaaa; }
+    .critical { background-color: #ff5050; color: white; }
+    .hell { background-color: #8b0000; color: white; }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      display: block;
+      margin: 10px auto;
+    }
+    #questions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .question label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .manual-content {
+      max-width: 700px;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      display: none;
+      text-align: left;
+    }
+    .manual-content h2 {
+      font-size: 1.4em;
+      margin-bottom: 10px;
+    }
+    .manual-content ul {
+      padding-left: 20px;
+      list-style-type: square;
+    }
+  </style>
+</head>
+<body>
+  <h1>サラリーマン地獄度診断</h1>
+  <p>日常的に経験してる・共感できることにチェックを入れてください。</p>
+
+  <button id="startButton" onclick="startDiagnosis()">診断を開始</button>
+  <div id="questions" style="display:none;"></div>
+  <button id="calculateButton" style="display:none;" onclick="calculateScore()">診断する</button>
+  <p class="result" id="result"></p>
+  <div id="manualDisplay" class="manual-content"></div>
+  <button id="shareButton" style="display:none;" onclick="shareOnTwitter()">Twitterでシェア</button>
+  <button id="lineButton" style="display:none;" onclick="shareOnLine()">LINEでシェア</button>
+
+  <script>
+    const manuals = {
+      serious: `
+        <h2>▶ ブラック脱出マニュアル</h2>
+        <h3>限界を察知せよマニュアル（社畜予備軍向け）</h3>
+        <p>「NO」を学ぶ。</p>
+        <ul>
+          <li>断り力 初級編 〜まずはコンビニの『レジ袋いりますか？』から〜</li>
+          <li>「察して」文化に真っ向勝負。まずは “察せません” バッジを胸に</li>
+          <li>休む勇気が持てない人間に、攻めの仕事などできない。</li>
+        </ul>
+      `,
+      danger: `
+        <h2>▶ ブラック脱出マニュアル</h2>
+        <h3>退職の美学入門（社畜認定向け）</h3>
+        <p>会社を辞めるのに、なぜ許可が必要だと思った？</p>
+        <ul>
+          <li>退職は「報告」であり「相談」ではない。</li>
+          <li>引き継ぎ？ あなたの健康より大事？</li>
+          <li>退職代行サービスは現代の忍法です。</li>
+        </ul>
+      `,
+      critical: `
+        <h2>▶ ブラック脱出マニュアル</h2>
+        <h3>労基ファイター養成講座（ブラック企業の亡霊向け）</h3>
+        <p>光の武器を持て。名を「労働基準法」と言う。</p>
+        <ul>
+          <li>有給は権利じゃなくて義務です。</li>
+          <li>「残業は自己責任」はブラックの常套句。</li>
+          <li>労基署はあなたの味方。たまに眠ってるけど。</li>
+        </ul>
+      `,
+      hell: `
+        <h2>▶ ブラック脱出マニュアル</h2>
+        <h3>非常口はこちらです：緊急脱出計画（地獄の業火向け）</h3>
+        <p>あなたの席は火口のすぐそば。逃げるのに理由はいらない。</p>
+        <ul>
+          <li>辞表を出す勇気がない？ → 書いて机に置けばいい。</li>
+          <li>出社＝マグマダイブ。避難訓練は“退職届を枕元に置く”ことから</li>
+          <li>“限界”の定義：もうすでに「何も感じない」なら、それは突破済みです</li>
+        </ul>
+        <h3>サバイバルキットを準備せよ：緊急用ドロップアウト戦略</h3>
+        <p>もう“考える”な。“逃げる”だけが正解だ。</p>
+        <ul>
+          <li>退職代行（最強の呪文「私は出社しません」）</li>
+          <li>通院記録（病んでる証明書、闇のパスポート）</li>
+          <li>給与明細（戦利品。証拠にもなる）</li>
+        </ul>
+      `
+    };
+
+    function startDiagnosis() {
+      const quotes = [
+        { text: "この仕事、急ぎじゃないけど、今日中にお願いね。", points: 3 },
+        { text: "次の会議で意見ちょうだい。あ、できればポジティブなやつで。", points: 3 },
+        { text: "帰ろうとした瞬間、メールが飛んでくる。", points: 2 },
+        { text: "上司『とりあえず案を10個くらい出して』", points: 3 },
+        { text: "休んだ翌日、誰かのミスをなぜか自分が謝る。", points: 2 },
+        { text: "検討します は やりません の丁寧語。", points: 1 },
+        { text: "有給があるのに、使える空気がない。", points: 1 },
+        { text: "頑張りすぎると仕事が増える。", points: 2 },
+        { text: "定時で帰ります の宣言がなぜか謝罪っぽくなる。", points: 2 },
+        { text: "返信で「？」だけ送られてくる心理戦の開幕", points: 2 },
+        { text: "とりあえずエビデンス出して → 何を証明すればいいのか分からない。", points: 3 },
+        { text: "納期は なるはや です。", points: 3 },
+        { text: "出社すると増える『ちょっとだけいい？』", points: 2 },
+        { text: "この会議、本当に必要？ と思いながら参加する。", points: 2 },
+        { text: "体調が悪くても出社すれば治るよ！", points: 5 },
+        { text: "仕事が終わらないなら帰らなければいいじゃない？", points: 5 },
+        { text: "『うちの会社、風通しがいいよ』 → 風が吹きすぎて何も残らない。", points: 4 },
+        { text: "社内チャットに“お疲れ様です”だけが流れる死のタイムライン。", points: 3 },
+        { text: "『とりあえず出社』が口癖の上司。非常時も例外なし。", points: 3 },
+        { text: "タイムカードは“押してから”が本番", points: 3 },
+        { text: "退職者の机だけすごく綺麗。二度と帰ってこないのを知っている。", points: 3 },
+        { text: "気づけば“社畜”が褒め言葉になっている。", points: 4 },
+        { text: "誰かが倒れるまで業務改善されない", points: 4 },
+        { text: "新入社員が1ヶ月で全滅。誰も理由を聞かない。", points: 4 }
+      ];
+
+      const questionContainer = document.getElementById('questions');
+      questionContainer.innerHTML = '';
+      questionContainer.style.display = 'flex';
+      document.getElementById('calculateButton').style.display = 'block';
+      document.getElementById('startButton').style.display = 'none';
+
+      const selected = [];
+      while (selected.length < 10) {
+        const i = Math.floor(Math.random() * quotes.length);
+        if (!selected.includes(i)) {
+          selected.push(i);
+          const div = document.createElement('div');
+          div.className = 'question';
+          div.innerHTML = `<label><input type="checkbox" value="${quotes[i].points}"> ${quotes[i].text}</label>`;
+          questionContainer.appendChild(div);
+        }
+      }
+    }
+
+    function calculateScore() {
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      let score = 0;
+      checkboxes.forEach(cb => {
+        if (cb.checked) score += parseInt(cb.value);
+      });
+
+      let resultText = '';
+      let resultClass = '';
+      let manualKey = null;
+
+      if (score <= 5) {
+        resultText = "あなたは【奇跡のホワイト企業戦士】！";
+        resultClass = "safe";
+      } else if (score <= 10) {
+        resultText = "あなたは【少し影響を受ける社会人】！";
+        resultClass = "mild";
+      } else if (score <= 15) {
+        resultText = "あなたは【普通のサラリーマン】！バランス型社会人。";
+        resultClass = "moderate";
+      } else if (score <= 20) {
+        resultText = "あなたは【社畜予備軍】！耐えながら働く毎日…";
+        resultClass = "serious";
+        manualKey = "serious";
+      } else if (score <= 25) {
+        resultText = "あなたは【社畜認定】！この環境で耐えているのがすごい。";
+        resultClass = "danger";
+        manualKey = "danger";
+      } else if (score <= 30) {
+        resultText = "あなたは【ブラック企業の亡霊】…この世の地獄。";
+        resultClass = "critical";
+        manualKey = "critical";
+      } else {
+        resultText = "あなたは【企業地獄の業火に焼かれし者】…生還を望むのは無謀。";
+        resultClass = "hell";
+        manualKey = "hell";
+      }
+
+      const result = document.getElementById('result');
+      result.innerText = resultText;
+      result.className = 'result ' + resultClass;
+
+      const manual = document.getElementById('manualDisplay');
+      manual.innerHTML = manualKey ? manuals[manualKey] : '';
+      manual.style.display = manualKey ? 'block' : 'none';
+
+      document.getElementById('shareButton').style.display = 'block';
+      document.getElementById('lineButton').style.display = 'block';
+    }
+
+    function shareOnTwitter() {
+      const text = document.getElementById('result').innerText;
+      const url = encodeURIComponent(text + ' #サラリーマン地獄度診断');
+      window.open(`https://twitter.com/intent/tweet?text=${url}`, '_blank');
+    }
+
+    function shareOnLine() {
+      const text = document.getElementById('result').innerText;
+      const lineUrl = `https://social-plugins.line.me/lineit/share?text=${encodeURIComponent(text)}`;
+      window.open(lineUrl, '_blank');
+    }
+  </script>
+</body>
+</html>
